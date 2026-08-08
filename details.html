@@ -1,0 +1,247 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Protected Technical Documentation — Push Notification to Mobile APP</title>
+<link rel="stylesheet" href="style.css">
+</head>
+<body>
+
+<!-- ============ AUTH GATE ============ -->
+<div class="gate" id="gate">
+  <div class="gate-panel">
+    <div class="gate-lock">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" width="20" height="20"><rect x="4" y="10" width="16" height="10" rx="2"/><path d="M8 10V7a4 4 0 0 1 8 0v3"/></svg>
+    </div>
+    <h3>Protected documentation</h3>
+    <p class="sub">Deeper technical material — event schemas, retry policy, scaling and monitoring notes.</p>
+
+    <form id="gate-form">
+      <div class="field-group">
+        <label for="gate-user">Username</label>
+        <input id="gate-user" type="text" autocomplete="username" required>
+      </div>
+      <div class="field-group">
+        <label for="gate-pass">Password</label>
+        <input id="gate-pass" type="password" autocomplete="current-password" required>
+      </div>
+      <div class="gate-error" id="gate-error"></div>
+      <button type="submit" class="btn primary gate-submit">Unlock documentation</button>
+    </form>
+
+    <div class="gate-hint">
+      Demo credentials — <b>demo</b> / <b>architecture</b>
+    </div>
+    <div class="gate-disclaimer">
+      This login is a presentation gate for a static documentation site. It runs entirely in your
+      browser and is not a real authentication system.
+    </div>
+  </div>
+</div>
+
+<!-- ============ PAGE CONTENT ============ -->
+<div id="page-content" class="locked-page">
+
+<nav class="nav">
+  <div class="nav-inner">
+    <div class="brand"><span class="dot"></span> PN&nbsp;/&nbsp;ARCHITECTURE</div>
+    <ul class="nav-links" id="nav-links">
+      <li><a href="index.html">Overview</a></li>
+      <li><a href="#schema">Event Schema</a></li>
+      <li><a href="#reliability">Reliability</a></li>
+      <li><a href="#scaling">Scaling</a></li>
+      <li><a href="#security">Security</a></li>
+      <li><a href="#monitoring">Monitoring</a></li>
+    </ul>
+    <button class="nav-toggle" id="nav-toggle" aria-label="Toggle navigation">☰</button>
+  </div>
+</nav>
+
+<header class="hero" style="padding-bottom:20px;">
+  <div class="eyebrow">Protected Technical Documentation</div>
+  <h1 style="font-size:clamp(28px,4.6vw,46px);">Under the hood of the <span class="accent">notification pipeline</span></h1>
+  <p class="lede">Implementation detail behind the public overview — how events are shaped, how
+    failures are handled, and how the system scales. This documents an existing production
+    architecture; nothing on this page executes against it.</p>
+
+  <div class="note" style="margin-top:28px; max-width:680px;">
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6"><path d="M12 9v4M12 17h.01M10.3 3.9 2.5 18a2 2 0 0 0 1.7 3h15.6a2 2 0 0 0 1.7-3L13.7 3.9a2 2 0 0 0-3.4 0Z"/></svg>
+    <span>This is a documentation layer describing a live system. Values below (topic names, field
+      names, thresholds) are illustrative of the design and simplified for presentation.</span>
+  </div>
+</header>
+
+<!-- ============ EVENT SCHEMA ============ -->
+<section class="section" id="schema">
+  <div class="section-head reveal">
+    <div class="eyebrow">01 · Kafka Event Schema</div>
+    <h2>What the scheduler publishes.</h2>
+    <p>One event is published per eligible seller/token pair, keyed by seller ID so all events for a
+      seller land on the same partition and preserve order.</p>
+  </div>
+
+  <div class="grid cols-2 reveal">
+    <div class="code-block">
+      <div class="code-head"><span>seller.notifications.events</span><span>JSON</span></div>
+      <pre>{
+  <span class="k">"eventId"</span>: <span class="s">"evt_9f2a1c"</span>,
+  <span class="k">"notificationId"</span>: <span class="s">"ntf_5b8e2d"</span>,
+  <span class="k">"sellerId"</span>: <span class="s">"slr_1029384"</span>,
+  <span class="k">"fcmToken"</span>: <span class="s">"&lt;device_token&gt;"</span>,
+  <span class="k">"title"</span>: <span class="s">"Payout ready to withdraw"</span>,
+  <span class="k">"body"</span>: <span class="s">"Your July payout is available."</span>,
+  <span class="k">"deepLink"</span>: <span class="s">"app://payouts/summary"</span>,
+  <span class="k">"priority"</span>: <span class="s">"HIGH"</span>,
+  <span class="k">"createdAt"</span>: <span class="s">"2026-08-08T09:15:00Z"</span>
+}</pre>
+    </div>
+    <div>
+      <div class="table-wrap" style="margin-bottom:20px;">
+        <table>
+          <thead><tr><th>Property</th><th>Notes</th></tr></thead>
+          <tbody>
+            <tr><td class="field">eventId</td><td>Unique per publish; used for idempotency on consume.</td></tr>
+            <tr><td class="field">sellerId</td><td>Kafka partition key — keeps per-seller ordering.</td></tr>
+            <tr><td class="field">fcmToken</td><td>Resolved at publish time, not at consume time.</td></tr>
+            <tr><td class="field">priority</td><td>Maps to FCM message priority (HIGH / NORMAL).</td></tr>
+          </tbody>
+        </table>
+      </div>
+      <div class="card">
+        <h3>Topic design</h3>
+        <p>A single topic with multiple partitions, sellerId as the partition key. Partition count is
+          set to match the CPaaS consumer group size so every consumer instance stays busy.</p>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- ============ RELIABILITY ============ -->
+<section class="section" id="reliability">
+  <div class="section-head reveal">
+    <div class="eyebrow">02 · Reliability &amp; Retry Policy</div>
+    <h2>What happens when a send fails.</h2>
+    <p>Delivery failures fall into two buckets: transient (retry) and terminal (don't retry).</p>
+  </div>
+
+  <div class="grid cols-2 reveal">
+    <div class="card">
+      <h3><span class="tag teal">Transient</span></h3>
+      <p style="margin-bottom:12px;">Network timeouts, FCM rate limiting, and 5xx responses are retried
+        with exponential backoff by the CPaaS consumer before the event is considered failed.</p>
+      <ul style="color:var(--text-dim); font-size:14px; padding-left:18px; list-style:disc;">
+        <li>Bounded number of attempts per event</li>
+        <li>Backoff increases between attempts</li>
+        <li>Exhausted retries route to a dead-letter topic</li>
+      </ul>
+    </div>
+    <div class="card">
+      <h3><span class="tag amber">Terminal</span></h3>
+      <p style="margin-bottom:12px;">An FCM response indicating an invalid or unregistered token is not
+        retried — it's treated as a signal to clean up stale state.</p>
+      <ul style="color:var(--text-dim); font-size:14px; padding-left:18px; list-style:disc;">
+        <li>Unregistered token is removed from the seller's record</li>
+        <li>Event is marked failed on the notification's counters</li>
+        <li>No further attempts for that token</li>
+      </ul>
+    </div>
+  </div>
+
+  <div class="table-wrap reveal" style="margin-top:24px;">
+    <table>
+      <thead><tr><th>Outcome</th><th>Handling</th></tr></thead>
+      <tbody>
+        <tr><td class="field">Delivered</td><td>notification.delivered_count incremented.</td></tr>
+        <tr><td class="field">Retried &amp; delivered</td><td>Counted as delivered once an attempt succeeds.</td></tr>
+        <tr><td class="field">Retries exhausted</td><td>Routed to dead-letter topic; notification.failed_count incremented.</td></tr>
+        <tr><td class="field">Invalid token</td><td>Token cleared from seller record; treated as failed, not retried.</td></tr>
+      </tbody>
+    </table>
+  </div>
+</section>
+
+<!-- ============ SCALING ============ -->
+<section class="section" id="scaling">
+  <div class="section-head reveal">
+    <div class="eyebrow">03 · Scaling Notes</div>
+    <h2>Handling large fan-out.</h2>
+    <p>A single notification can target a large share of the seller base — the design assumes that as
+      the normal case, not the exception.</p>
+  </div>
+
+  <div class="grid cols-3 reveal">
+    <div class="card">
+      <h3>Scheduler</h3>
+      <p>Processes notifications independently, so a large notification doesn't block smaller ones
+        from being evaluated in the same cycle.</p>
+    </div>
+    <div class="card">
+      <h3>Kafka partitions</h3>
+      <p>Partition count is sized to the CPaaS consumer group so throughput scales roughly linearly
+        with added consumers.</p>
+    </div>
+    <div class="card">
+      <h3>CPaaS consumers</h3>
+      <p>Horizontally scaled; each consumer instance owns a subset of partitions and can be scaled up
+        ahead of known high-volume sends.</p>
+    </div>
+  </div>
+</section>
+
+<!-- ============ SECURITY ============ -->
+<section class="section" id="security">
+  <div class="section-head reveal">
+    <div class="eyebrow">04 · Security Notes</div>
+    <h2>Keeping delivery credentials contained.</h2>
+  </div>
+
+  <div class="cond-list reveal">
+    <div class="cond-item">
+      <span class="tag violet cond-tag">Auth</span>
+      <div><h4>OAuth 2.0 service account</h4><p>The CPaaS service authenticates to Firebase using a service account credential, not a long-lived static API key.</p></div>
+    </div>
+    <div class="cond-item">
+      <span class="tag violet cond-tag">Secrets</span>
+      <div><h4>Managed outside application code</h4><p>Credentials are held in a secrets manager and injected at runtime — they are never checked into source or logs.</p></div>
+    </div>
+    <div class="cond-item">
+      <span class="tag violet cond-tag">Access</span>
+      <div><h4>Least-privilege topics</h4><p>The scheduler can only publish to the notification topic; the CPaaS service can only consume from it.</p></div>
+    </div>
+  </div>
+</section>
+
+<!-- ============ MONITORING ============ -->
+<section class="section" id="monitoring">
+  <div class="section-head reveal">
+    <div class="eyebrow">05 · Monitoring &amp; Alerting</div>
+    <h2>Signals the team watches.</h2>
+  </div>
+
+  <div class="table-wrap reveal">
+    <table>
+      <thead><tr><th>Metric</th><th>Why it matters</th></tr></thead>
+      <tbody>
+        <tr><td class="field">Consumer lag</td><td>Growing lag means CPaaS isn't keeping pace with Kafka — a signal to scale consumers.</td></tr>
+        <tr><td class="field">Delivery success rate</td><td>Tracks the ratio of delivered to attempted sends per cycle.</td></tr>
+        <tr><td class="field">Invalid token rate</td><td>A rising rate can indicate a client-side token registration issue.</td></tr>
+        <tr><td class="field">Scheduler cycle duration</td><td>Watched against the 15-minute interval to catch cycles that run long.</td></tr>
+        <tr><td class="field">Dead-letter volume</td><td>Any sustained volume here is investigated as a delivery-path issue.</td></tr>
+      </tbody>
+    </table>
+  </div>
+</section>
+
+<footer>
+  <div class="footer-inner">
+    <div>PUSH NOTIFICATION TO MOBILE APP — Protected Technical Documentation</div>
+    <div><a href="index.html">← Back to overview</a></div>
+  </div>
+</footer>
+
+</div><!-- /#page-content -->
+
+<script src="script.js"></script>
+</body>
+</html>

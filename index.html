@@ -1,0 +1,421 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Push Notification to Mobile APP — Architecture Documentation</title>
+<meta name="description" content="Architecture documentation for a production push notification pipeline: iWorkBench, MongoDB, a 15-minute scheduler, Kafka, a CPaaS service, and Firebase Cloud Messaging.">
+<link rel="stylesheet" href="style.css">
+</head>
+<body>
+
+<!-- ============ SPLASH ============ -->
+<div class="splash" id="splash">
+  <canvas id="splash-canvas"></canvas>
+  <div class="splash-content">
+    <div class="splash-eyebrow">Documentation Build · v1.0</div>
+    <div class="splash-title">PUSH NOTIFICATION<br>TO <span>MOBILE APP</span></div>
+    <div class="splash-status" id="splash-status">INITIALIZING</div>
+    <div class="splash-bar"><div class="splash-bar-fill" id="splash-bar-fill"></div></div>
+    <button class="splash-skip" id="splash-skip">Skip intro</button>
+  </div>
+</div>
+
+<!-- ============ NAV ============ -->
+<nav class="nav">
+  <div class="nav-inner">
+    <div class="brand"><span class="dot"></span> PN&nbsp;/&nbsp;ARCHITECTURE</div>
+    <ul class="nav-links" id="nav-links">
+      <li><a href="#overview">Overview</a></li>
+      <li><a href="#flow">Flow</a></li>
+      <li><a href="#fcm-registration">FCM Tokens</a></li>
+      <li><a href="#database">Database</a></li>
+      <li><a href="#kafka">Kafka / CPaaS</a></li>
+      <li><a href="details.html" class="docs-link">Protected Docs →</a></li>
+    </ul>
+    <button class="nav-toggle" id="nav-toggle" aria-label="Toggle navigation">☰</button>
+  </div>
+</nav>
+
+<!-- ============ HERO ============ -->
+<header class="hero">
+  <div class="hero-top">
+    <div>
+      <div class="eyebrow">Architecture Documentation</div>
+      <h1>Push Notification to <span class="accent">Mobile APP</span></h1>
+      <p class="lede">A visual walkthrough of a live, production-used notification pipeline —
+        from an Ops/Admin action in iWorkBench, through MongoDB and a scheduled evaluation job,
+        to Kafka, a CPaaS delivery service, and Firebase Cloud Messaging.</p>
+    </div>
+    <div class="hero-meta">
+      <div><b>System</b> · Seller Notification Platform</div>
+      <div><b>Status</b> · Production</div>
+      <div><b>Scheduler interval</b> · 15 min</div>
+      <div><b>Delivery channel</b> · Firebase FCM</div>
+    </div>
+  </div>
+
+  <div class="hero-actions">
+    <a href="#overview" class="btn primary">View architecture ↓</a>
+    <a href="details.html" class="btn ghost locked">🔒 Protected technical docs</a>
+  </div>
+
+  <!-- Signature interactive pipeline -->
+  <div class="pipeline-wrap reveal">
+    <div class="pipeline-header">
+      <span>Live pipeline reference · click a node</span>
+      <span class="tick"><span class="pulse"></span> next scheduler tick in <span id="scheduler-clock" class="mono">00:15</span> (simulated)</span>
+    </div>
+
+    <div class="pipeline" role="list">
+      <div class="p-node" tabindex="0" role="listitem" data-node="iworkbench">
+        <div class="icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6"><rect x="3" y="4" width="18" height="13" rx="1.5"/><path d="M8 21h8M12 17v4"/></svg></div>
+        <div class="label">iWorkBench</div><div class="sub">Admin console</div>
+      </div>
+      <div class="p-link"><span class="flow-dot" style="animation-delay:0s"></span></div>
+
+      <div class="p-node" tabindex="0" role="listitem" data-node="mongodb">
+        <div class="icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6"><path d="M12 3c3 3 4 6 4 9a4 4 0 0 1-8 0c0-3 1-6 4-9Z"/><path d="M12 12v9"/></svg></div>
+        <div class="label">MongoDB</div><div class="sub">seller_mob_noti</div>
+      </div>
+      <div class="p-link"><span class="flow-dot" style="animation-delay:.3s"></span></div>
+
+      <div class="p-node amber" tabindex="0" role="listitem" data-node="scheduler">
+        <div class="icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6"><circle cx="12" cy="12" r="8.5"/><path d="M12 7v5l3.2 2"/></svg></div>
+        <div class="label">Scheduler</div><div class="sub">every 15 min</div>
+      </div>
+      <div class="p-link"><span class="flow-dot" style="animation-delay:.6s"></span></div>
+
+      <div class="p-node" tabindex="0" role="listitem" data-node="conditions">
+        <div class="icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6"><path d="M4 6h16M4 12h10M4 18h6"/><circle cx="19" cy="12" r="1.6"/><circle cx="15" cy="18" r="1.6"/></svg></div>
+        <div class="label">Conditions</div><div class="sub">eligibility</div>
+      </div>
+      <div class="p-link"><span class="flow-dot" style="animation-delay:.9s"></span></div>
+
+      <div class="p-node" tabindex="0" role="listitem" data-node="tokens">
+        <div class="icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6"><rect x="6" y="2" width="12" height="20" rx="2.5"/><path d="M10 18h4"/></svg></div>
+        <div class="label">FCM Tokens</div><div class="sub">lookup</div>
+      </div>
+      <div class="p-link"><span class="flow-dot" style="animation-delay:1.2s"></span></div>
+
+      <div class="p-node" tabindex="0" role="listitem" data-node="kafka">
+        <div class="icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6"><circle cx="6" cy="6" r="2.2"/><circle cx="6" cy="18" r="2.2"/><circle cx="18" cy="12" r="2.2"/><path d="M8 7l8 4M8 17l8-4"/></svg></div>
+        <div class="label">Kafka</div><div class="sub">event topic</div>
+      </div>
+      <div class="p-link"><span class="flow-dot" style="animation-delay:1.5s"></span></div>
+
+      <div class="p-node" tabindex="0" role="listitem" data-node="cpaas">
+        <div class="icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6"><rect x="3" y="7" width="18" height="10" rx="2"/><path d="M7 12h.01M12 12h.01M17 12h.01"/></svg></div>
+        <div class="label">CPaaS</div><div class="sub">consumer</div>
+      </div>
+      <div class="p-link"><span class="flow-dot" style="animation-delay:1.8s"></span></div>
+
+      <div class="p-node violet" tabindex="0" role="listitem" data-node="fcm">
+        <div class="icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6"><path d="M12 2 3 7v6c0 5 4 8 9 9 5-1 9-4 9-9V7l-9-5Z"/></svg></div>
+        <div class="label">Firebase FCM</div><div class="sub">OAuth 2.0 POST</div>
+      </div>
+      <div class="p-link"><span class="flow-dot" style="animation-delay:2.1s"></span></div>
+
+      <div class="p-node" tabindex="0" role="listitem" data-node="mobile">
+        <div class="icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6"><rect x="7" y="2" width="10" height="20" rx="2"/><path d="M11 19h2"/></svg></div>
+        <div class="label">Mobile App</div><div class="sub">seller device</div>
+      </div>
+    </div>
+
+    <div class="pipeline-detail">
+      <div class="d-title" id="pipeline-detail-title">iWorkBench — Admin Console</div>
+      <p id="pipeline-detail-text">An Ops/Admin user composes a notification in iWorkBench.</p>
+    </div>
+  </div>
+</header>
+
+<!-- ============ OVERVIEW ============ -->
+<section class="section" id="overview">
+  <div class="section-head reveal">
+    <div class="eyebrow">01 · Architecture Overview</div>
+    <h2>One notification, six systems, one delivered push.</h2>
+    <p>An Ops/Admin user creates a notification in iWorkBench. It's stored in MongoDB. A scheduler
+      running every 15 minutes evaluates eligible notifications and sellers, resolves FCM tokens,
+      publishes events to Kafka, and a CPaaS service consumes those events and calls Firebase FCM,
+      which delivers the notification to the seller's device.</p>
+  </div>
+
+  <div class="grid cols-3 reveal">
+    <div class="card">
+      <h3><span class="tag teal">Authoring</span></h3>
+      <p><b style="color:var(--text)">iWorkBench</b> is where an Ops/Admin defines what a notification says,
+        who it's for, and when it's allowed to send. Nothing leaves this layer immediately — the
+        notification is written to MongoDB in a pending state.</p>
+    </div>
+    <div class="card">
+      <h3><span class="tag amber">Scheduling</span></h3>
+      <p>A <b style="color:var(--text)">scheduler</b> polls MongoDB every 15 minutes, evaluates each
+        pending notification's dynamic conditions, and resolves the FCM token for every eligible seller.</p>
+    </div>
+    <div class="card">
+      <h3><span class="tag violet">Delivery</span></h3>
+      <p>Eligible seller/token pairs are published to <b style="color:var(--text)">Kafka</b>. A
+        <b style="color:var(--text)">CPaaS service</b> consumes those events and sends an authenticated
+        request to <b style="color:var(--text)">Firebase FCM</b>, which routes to the device.</p>
+    </div>
+  </div>
+</section>
+
+<!-- ============ COMPLETE FLOW ============ -->
+<section class="section" id="flow">
+  <div class="section-head reveal">
+    <div class="eyebrow">02 · Complete Notification Flow</div>
+    <h2>From admin action to device delivery.</h2>
+    <p>The end-to-end sequence a single notification travels through in production.</p>
+  </div>
+
+  <div class="flow-steps reveal">
+    <div class="flow-step">
+      <div class="step-num">01</div>
+      <div class="step-body">
+        <h4>Notification created in iWorkBench</h4>
+        <p>An Ops/Admin user fills in title, body, deep link, target audience, and send window,
+          then saves the notification.</p>
+        <div class="step-meta"><span class="tag">iWorkBench</span></div>
+      </div>
+    </div>
+    <div class="flow-step">
+      <div class="step-num">02</div>
+      <div class="step-body">
+        <h4>Record persisted to MongoDB</h4>
+        <p>The notification is written to the <code class="mono">seller_mob_noti</code> collection with a
+          <code class="mono">PENDING</code> status, awaiting the next scheduler cycle.</p>
+        <div class="step-meta"><span class="tag teal">MongoDB</span></div>
+      </div>
+    </div>
+    <div class="flow-step">
+      <div class="step-num">03</div>
+      <div class="step-body">
+        <h4>Scheduler cycle begins (every 15 minutes)</h4>
+        <p>The production scheduler reads notification records from MongoDB whose send window has opened
+          and are still pending.</p>
+        <div class="step-meta"><span class="tag amber">Scheduler</span></div>
+      </div>
+    </div>
+    <div class="flow-step">
+      <div class="step-num">04</div>
+      <div class="step-body">
+        <h4>Dynamic conditions evaluated</h4>
+        <p>The scheduler evaluates each notification's targeting rules — category, region, seller tier,
+          opt-in status — to build the eligible seller set. See <a href="#conditions" style="color:var(--teal)">condition types</a> below.</p>
+        <div class="step-meta"><span class="tag amber">Scheduler</span></div>
+      </div>
+    </div>
+    <div class="flow-step">
+      <div class="step-num">05</div>
+      <div class="step-body">
+        <h4>FCM tokens resolved</h4>
+        <p>For each eligible seller, the scheduler resolves the FCM token their mobile app most recently
+          registered.</p>
+        <div class="step-meta"><span class="tag amber">Scheduler</span></div>
+      </div>
+    </div>
+    <div class="flow-step">
+      <div class="step-num">06</div>
+      <div class="step-body">
+        <h4>Events published to Kafka</h4>
+        <p>The scheduler publishes one notification event per seller/token pair to a Kafka topic,
+          decoupling scheduling from delivery.</p>
+        <div class="step-meta"><span class="tag violet">Kafka</span></div>
+      </div>
+    </div>
+    <div class="flow-step">
+      <div class="step-num">07</div>
+      <div class="step-body">
+        <h4>CPaaS service consumes events</h4>
+        <p>The CPaaS notification service consumes events off Kafka and builds a platform-specific
+          payload for each device.</p>
+        <div class="step-meta"><span class="tag violet">CPaaS</span></div>
+      </div>
+    </div>
+    <div class="flow-step">
+      <div class="step-num">08</div>
+      <div class="step-body">
+        <h4>Authenticated request to Firebase FCM</h4>
+        <p>The CPaaS service sends an OAuth 2.0 authenticated HTTP POST to the Firebase Cloud Messaging
+          API for each device.</p>
+        <div class="step-meta"><span class="tag violet">Firebase FCM</span></div>
+      </div>
+    </div>
+    <div class="flow-step">
+      <div class="step-num">09</div>
+      <div class="step-body">
+        <h4>Notification delivered to device</h4>
+        <p>Firebase routes the payload using the FCM token to the seller's mobile app, which renders
+          the notification and handles the deep link on tap.</p>
+        <div class="step-meta"><span class="tag">Mobile App</span></div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- ============ FCM TOKEN REGISTRATION ============ -->
+<section class="section" id="fcm-registration">
+  <div class="section-head reveal">
+    <div class="eyebrow">03 · FCM Token Registration Flow</div>
+    <h2>How a device becomes reachable.</h2>
+    <p>Before the scheduler can resolve a token, the mobile app has to register one. This runs
+      independently of the send flow, whenever the app starts or its token refreshes.</p>
+  </div>
+
+  <div class="grid cols-2 reveal">
+    <div>
+      <div class="flow-steps">
+        <div class="flow-step">
+          <div class="step-num">A</div>
+          <div class="step-body">
+            <h4>App requests an FCM token</h4>
+            <p>On launch (or when a token is refreshed), the mobile app asks the Firebase SDK for a
+              current device token.</p>
+          </div>
+        </div>
+        <div class="flow-step">
+          <div class="step-num">B</div>
+          <div class="step-body">
+            <h4>Token sent to the backend</h4>
+            <p>The app sends the token, along with the seller's identity, to the token-registration
+              endpoint.</p>
+          </div>
+        </div>
+        <div class="flow-step">
+          <div class="step-num">C</div>
+          <div class="step-body">
+            <h4>Token mapped to seller</h4>
+            <p>The backend stores the token against the seller's record, replacing any previous token
+              for that device.</p>
+          </div>
+        </div>
+        <div class="flow-step">
+          <div class="step-num">D</div>
+          <div class="step-body">
+            <h4>Available for the next scheduler cycle</h4>
+            <p>The stored token is what the scheduler resolves in step 05 of the notification flow.</p>
+          </div>
+        </div>
+      </div>
+    </div>
+    <div class="card" style="align-self:start;">
+      <h3>Why this matters</h3>
+      <p style="margin-bottom:12px;">Token registration is what keeps delivery reliable. A stale or
+        missing token is the most common reason a notification doesn't reach a device.</p>
+      <div class="note info" style="margin-top:16px;">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6"><circle cx="12" cy="12" r="9"/><path d="M12 8v5M12 16h.01"/></svg>
+        <span>Tokens rotate. FCM may issue a new token for a device at any time, so the mobile app
+          re-registers whenever Firebase reports a refresh.</span>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- ============ DATABASE ============ -->
+<section class="section" id="database">
+  <div class="section-head reveal">
+    <div class="eyebrow">04 · Database Overview</div>
+    <h2>seller_mob_noti</h2>
+    <p>The MongoDB collection that backs every notification, from draft to delivery accounting.</p>
+  </div>
+
+  <div class="table-wrap reveal">
+    <table>
+      <thead>
+        <tr><th>Field</th><th>Type</th><th>Description</th></tr>
+      </thead>
+      <tbody>
+        <tr><td class="field">_id</td><td>ObjectId</td><td>Unique notification identifier.</td></tr>
+        <tr><td class="field">title</td><td>String</td><td>Notification headline shown on the device.</td></tr>
+        <tr><td class="field">body</td><td>String</td><td>Notification message text.</td></tr>
+        <tr><td class="field">deep_link</td><td>String</td><td>In-app destination opened when the notification is tapped.</td></tr>
+        <tr><td class="field">target_criteria</td><td>Object</td><td>Category, region, seller tier, and opt-in requirements used during condition evaluation.</td></tr>
+        <tr><td class="field">schedule_window</td><td>Object</td><td>Earliest and latest time the notification is eligible to send.</td></tr>
+        <tr><td class="field">status</td><td>Enum</td><td>DRAFT · SCHEDULED · PROCESSING · SENT · PARTIAL · FAILED.</td></tr>
+        <tr><td class="field">created_by</td><td>String</td><td>Ops/Admin user who authored the notification in iWorkBench.</td></tr>
+        <tr><td class="field">created_at</td><td>Timestamp</td><td>When the record was first persisted.</td></tr>
+        <tr><td class="field">processed_at</td><td>Timestamp</td><td>When the scheduler last evaluated this record.</td></tr>
+        <tr><td class="field">eligible_seller_count</td><td>Number</td><td>Sellers who passed condition evaluation for this cycle.</td></tr>
+        <tr><td class="field">delivered_count</td><td>Number</td><td>Events confirmed delivered by the CPaaS service.</td></tr>
+        <tr><td class="field">failed_count</td><td>Number</td><td>Events that failed delivery (invalid token, FCM error, etc.).</td></tr>
+      </tbody>
+    </table>
+  </div>
+</section>
+
+<!-- ============ DYNAMIC CONDITIONS ============ -->
+<section class="section" id="conditions">
+  <div class="section-head reveal">
+    <div class="eyebrow">05 · Dynamic Condition Overview</div>
+    <h2>How eligibility is decided.</h2>
+    <p>Each notification carries its own targeting rules. The scheduler evaluates these against every
+      seller on every cycle to build that run's eligible set.</p>
+  </div>
+
+  <div class="cond-list reveal">
+    <div class="cond-item">
+      <span class="tag teal cond-tag">Audience</span>
+      <div><h4>Category, region &amp; tier</h4><p>Restricts a notification to sellers matching a business category, geographic region, or account tier.</p></div>
+    </div>
+    <div class="cond-item">
+      <span class="tag amber cond-tag">Lifecycle</span>
+      <div><h4>Account status</h4><p>Only active, verified sellers are considered — suspended or incomplete accounts are excluded automatically.</p></div>
+    </div>
+    <div class="cond-item">
+      <span class="tag violet cond-tag">Engagement</span>
+      <div><h4>Opt-in &amp; preferences</h4><p>Sellers who have opted out of a notification category are filtered out before token resolution.</p></div>
+    </div>
+    <div class="cond-item">
+      <span class="tag cond-tag">Timing</span>
+      <div><h4>Schedule window &amp; time zone</h4><p>A notification is only eligible while the current time falls inside its configured send window.</p></div>
+    </div>
+    <div class="cond-item">
+      <span class="tag teal cond-tag">Throttling</span>
+      <div><h4>Frequency caps</h4><p>Per-seller sending limits prevent a single seller from receiving an excessive number of notifications in a short period.</p></div>
+    </div>
+  </div>
+</section>
+
+<!-- ============ KAFKA / CPAAS / FCM ============ -->
+<section class="section" id="kafka">
+  <div class="section-head reveal">
+    <div class="eyebrow">06 · Kafka, CPaaS &amp; Firebase FCM</div>
+    <h2>Decoupled scheduling from delivery.</h2>
+    <p>Publishing to Kafka lets the scheduler move on immediately, while a separately-scaled consumer
+      handles the slower work of talking to Firebase.</p>
+  </div>
+
+  <div class="grid cols-3 reveal">
+    <div class="card">
+      <h3><span class="tag violet">Kafka</span></h3>
+      <p>The scheduler publishes a notification event per eligible seller/token pair. Kafka buffers
+        bursts and lets the CPaaS service consume at its own pace.</p>
+    </div>
+    <div class="card">
+      <h3><span class="tag violet">CPaaS Service</span></h3>
+      <p>Consumes events, builds the platform-specific message body, and manages retries for
+        transient delivery failures.</p>
+    </div>
+    <div class="card">
+      <h3><span class="tag violet">Firebase FCM</span></h3>
+      <p>Receives an OAuth 2.0 authenticated request per device and routes the payload to the
+        matching seller mobile app.</p>
+    </div>
+  </div>
+
+  <div style="margin-top:28px;" class="reveal">
+    <a href="details.html" class="btn ghost locked">🔒 See event schema &amp; retry policy in protected docs →</a>
+  </div>
+</section>
+
+<footer>
+  <div class="footer-inner">
+    <div>PUSH NOTIFICATION TO MOBILE APP — Architecture Documentation</div>
+    <div><a href="details.html">Protected technical documentation →</a></div>
+  </div>
+</footer>
+
+<script src="script.js"></script>
+</body>
+</html>
