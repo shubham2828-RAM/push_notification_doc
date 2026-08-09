@@ -48,9 +48,10 @@
     <div class="brand"><span class="dot"></span> PN&nbsp;/&nbsp;ARCHITECTURE</div>
     <ul class="nav-links" id="nav-links">
       <li><a href="index.html">Overview</a></li>
-      <li><a href="#schema">Event Schema</a></li>
+      <li><a href="#schema">Firebase_Schema</a></li>
       <li><a href="#reliability">Reliability</a></li>
-      <li><a href="#scaling">Scaling</a></li>
+      <li><a href="#conditions_filter">Conditions_Filter</a></li>
+      <li><a href="#notification_condition_mapping">Notification_Condition_Mapping</a></li>
       <li><a href="#security">Security</a></li>
       <li><a href="#monitoring">Monitoring</a></li>
     </ul>
@@ -72,46 +73,43 @@
   </div>
 </header>
 
-<!-- ============ EVENT SCHEMA ============ -->
+<!-- ============ FIREBASE  SCHEMA ============ -->
 <section class="section" id="schema">
   <div class="section-head reveal">
-    <div class="eyebrow">01 · Kafka Event Schema</div>
-    <h2>What the scheduler publishes.</h2>
-    <p>One event is published per eligible seller/token pair, keyed by seller ID so all events for a
-      seller land on the same partition and preserve order.</p>
+    <div class="eyebrow">01 · Firebase POST API Schema</div>
+    <h2>What the cpaas publishes to firebase</h2>
+    <p>One API hit per eligible seller/token pair, keyed by seller ID.</p>
   </div>
 
   <div class="grid cols-2 reveal">
     <div class="code-block">
       <div class="code-head"><span>seller.notifications.events</span><span>JSON</span></div>
       <pre>{
-  <span class="k">"eventId"</span>: <span class="s">"evt_9f2a1c"</span>,
-  <span class="k">"notificationId"</span>: <span class="s">"ntf_5b8e2d"</span>,
-  <span class="k">"sellerId"</span>: <span class="s">"slr_1029384"</span>,
-  <span class="k">"fcmToken"</span>: <span class="s">"&lt;device_token&gt;"</span>,
-  <span class="k">"title"</span>: <span class="s">"Payout ready to withdraw"</span>,
-  <span class="k">"body"</span>: <span class="s">"Your July payout is available."</span>,
-  <span class="k">"deepLink"</span>: <span class="s">"app://payouts/summary"</span>,
-  <span class="k">"priority"</span>: <span class="s">"HIGH"</span>,
-  <span class="k">"createdAt"</span>: <span class="s">"2026-08-08T09:15:00Z"</span>
+  <span class="k">"message"</span>: {
+    <span class="k">"token"</span>: <span class="s">"dIQBgAgVeUPhasVgAaVEs4uGzRsUhQ96yu2ExGxBzYy_mRs8b3o"</span>,
+    <span class="k">"notification"</span>: {
+      <span class="k">"title"</span>: <span class="s">"Testing Notification"</span>,
+      <span class="k">"body"</span>: <span class="s">"This notification was sent without a service account file."</span>
+    },
+    <span class="k">"data"</span>: {
+      <span class="k">"story_id"</span>: <span class="s">"9876"</span>,
+      <span class="k">"click_action"</span>: <span class="s">"FLUTTER_NOTIFICATION_CLICK"</span>
+    }
+  }
 }</pre>
     </div>
     <div>
-      <div class="table-wrap" style="margin-bottom:20px;">
+      <!-- <div class="table-wrap" style="margin-bottom:20px;">
         <table>
           <thead><tr><th>Property</th><th>Notes</th></tr></thead>
           <tbody>
-            <tr><td class="field">eventId</td><td>Unique per publish; used for idempotency on consume.</td></tr>
-            <tr><td class="field">sellerId</td><td>Kafka partition key — keeps per-seller ordering.</td></tr>
-            <tr><td class="field">fcmToken</td><td>Resolved at publish time, not at consume time.</td></tr>
-            <tr><td class="field">priority</td><td>Maps to FCM message priority (HIGH / NORMAL).</td></tr>
+            <tr><td class="field">token</td><td>This token should beregistered over firebase.</td></tr>
           </tbody>
         </table>
-      </div>
+      </div> -->
       <div class="card">
-        <h3>Topic design</h3>
-        <p>A single topic with multiple partitions, sellerId as the partition key. Partition count is
-          set to match the CPaaS consumer group size so every consumer instance stays busy.</p>
+        <h3>Cpaas design</h3>
+        <p>This CPaaS microservice is designed as a separate, dedicated service to handle high-frequency events efficiently while ensuring reliable and consistent message delivery.</p>
       </div>
     </div>
   </div>
@@ -162,37 +160,152 @@
 </section>
 
 <!-- ============ SCALING ============ -->
-<section class="section" id="scaling">
+<section class="section" id="conditions_filter">
   <div class="section-head reveal">
-    <div class="eyebrow">03 · Scaling Notes</div>
-    <h2>Handling large fan-out.</h2>
-    <p>A single notification can target a large share of the seller base — the design assumes that as
-      the normal case, not the exception.</p>
+    <div class="eyebrow">03 · Conditions Filters</div>
+    <h2>Filtering data according to conditions.</h2>
+    <p>Filtering out those data which are lying according to conditions provided in every single created notification.</p>
   </div>
 
-  <div class="grid cols-3 reveal">
+  <div class="header-inline">
+    <h2>All conditions name</h2>
+    <h5 class="margin-left:auto">Base collection name : oms_sellers</h5>
+  </div>
+  <div class="grid cols-2 reveal">
     <div class="card">
-      <h3>Scheduler</h3>
-      <p>Processes notifications independently, so a large notification doesn't block smaller ones
-        from being evaluated in the same cycle.</p>
+      <h3>Monthly Shipment Volume</h3>
+      <p><strong>Conditions name</strong>  - monthly_shipment_volumne</p>
+      <p><strong>Conditions fields name</strong>  -  minimum_order_value & maximum_order_value</p>
+      <p><strong>Filter on collection name</strong>  -  oms_sellers</p>
+      <p><strong>Filter on field name</strong>  -  shipment_count</p>
+      <p><strong>Filter condition</strong>  -  $gte: minimum_order_value & $lte: maximum_order_value</p>
     </div>
     <div class="card">
-      <h3>Kafka partitions</h3>
-      <p>Partition count is sized to the CPaaS consumer group so throughput scales roughly linearly
-        with added consumers.</p>
+      <h3>Byoc Plan</h3>
+      <p><strong>Conditions name</strong>  - byoc_plan</p>
+      <p><strong>Conditions fields name</strong>  -  all_byoc_couriers & specific_byoc_courier</p>
+      <p><strong>Filter on collection name</strong>  -  tms_shipper_freight_categories</p>
+      <p><strong>Filter on field name</strong>  -  shipper_code</p>
+      <p><strong>Filter condition</strong>  -  $in: [all_byoc_couriers, specific_byoc_courier]</p>
     </div>
     <div class="card">
-      <h3>CPaaS consumers</h3>
-      <p>Horizontally scaled; each consumer instance owns a subset of partitions and can be scaled up
-        ahead of known high-volume sends.</p>
+      <h3>Manual Seller Selection</h3>
+      <p><strong>Conditions name</strong>  - manual_seller_selection</p>
+      <p><strong>Conditions fields name</strong>  -  seller_code</p>
+      <p><strong>Filter on collection name</strong>  -  oms_sellers</p>
+      <p><strong>Filter on field name</strong>  -  seller_code</p>
+      <p><strong>Filter condition</strong>  -  $in: seller_code</p>
+    </div>
+    <div class="card">
+      <h3>Kyc Type</h3>
+      <p><strong>Conditions name</strong>  - kyc_type</p>
+      <p><strong>Conditions fields name</strong>  -  kyc_type_name</p>
+      <p><strong>Filter on collection name</strong>  -  oms_seller_kyc</p>
+      <p><strong>Filter on field name</strong>  -  seller_kyc_type</p>
+      <p><strong>Filter condition</strong>  -  $in: kyc_type_name</p>
+    </div>
+    <div class="card">
+      <h3>Plan Type</h3>
+      <p><strong>Conditions name</strong>  - plan_type</p>
+      <p><strong>Conditions fields name</strong>  -  plan_type_name</p>
+      <p><strong>Filter on collection name</strong>  -  mst_plans</p>
+      <p><strong>Filter on field name</strong>  -  mst_plan_name</p>
+      <p><strong>Filter condition</strong>  -  $in: plan_type_name</p>
+    </div>
+    <div class="card">
+      <h3>Device Type</h3>
+      <p><strong>Conditions name</strong>  - device_type</p>
+      <p><strong>Conditions fields name</strong>  -  device_type</p>
+      <p><strong>Filter on collection name</strong>  -  seller_mobile_device_info</p>
+      <p><strong>Filter on field name</strong>  -  device_type</p>
+      <p><strong>Filter condition</strong>  -  $in: device_type</p>
+    </div>
+    <div class="card">
+      <h3>App Version</h3>
+      <p><strong>Conditions name</strong>  - app_version</p>
+      <p><strong>Conditions fields name</strong>  -  app_version_name</p>
+      <p><strong>Filter on collection name</strong>  -  seller_mobile_device_info</p>
+      <p><strong>Filter on field name</strong>  -  app_version</p>
+      <p><strong>Filter condition</strong>  -  $in: app_version_name</p>
+    </div>
+    <div class="card">
+      <h3>State Location</h3>
+      <p><strong>Conditions name</strong>  - state_location</p>
+      <p><strong>Conditions fields name</strong>  -  multi_state</p>
+      <p><strong>Filter on collection name</strong>  -  oms_bp_addresses_ned</p>
+      <p><strong>Filter on field name</strong>  -  shipping_state</p>
+      <p><strong>Filter condition</strong>  -  $in: states</p>
+    </div>
+    <div class="card">
+      <h3>Wallet Balance</h3>
+      <p><strong>Conditions name</strong>  - wallet_balance</p>
+      <p><strong>Conditions fields name</strong>  -  minimum_amount & maximum_amount</p>
+      <p><strong>Filter on collection name</strong>  -  fms_wallet_balances</p>
+      <p><strong>Filter on field name</strong>  -  fms_amount</p>
+      <p><strong>Filter condition</strong>  -  $gte: minimum_amount & $lte: maximum_amount</p>
+    </div>
+    <div class="card">
+      <h3>First Recharge Date</h3>
+      <p><strong>Conditions name</strong>  - first_recharge_date</p>
+      <p><strong>Conditions fields name</strong>  -  operator & recharge_date_range & start_date & end_date & number_of_days</p>
+      <p><strong>Filter on collection name</strong>  -  oms_sellers</p>
+      <p><strong>Filter on field name</strong>  -  first_recharged_date</p>
+      <p><strong>Filter condition</strong>  -  {Depends on operator}</p>
+    </div>
+    <div class="card">
+      <h3>Signup Date</h3>
+      <p><strong>Conditions name</strong>  - signup_date</p>
+      <p><strong>Conditions fields name</strong>  -  signup_type & before_date & start_date & end_date</p>
+      <p><strong>Filter on collection name</strong>  -  oms_sellers</p>
+      <p><strong>Filter on field name</strong>  -  created_date</p>
+      <p><strong>Filter condition</strong>  -  {Depends on signup_type}</p>
+    </div>
+    <div class="card">
+      <h3>Channel Type</h3>
+      <p><strong>Conditions name</strong>  - channel_type</p>
+      <p><strong>Conditions fields name</strong>  -  channel_type</p>
+      <p><strong>Filter on collection name</strong>  -  oms_seller_channels</p>
+      <p><strong>Filter on field name</strong>  -  seller_channel_cart</p>
+      <p><strong>Filter condition</strong>  -  $in: channel_type</p>
+    </div>
+    <div class="card">
+      <h3>Billing Type</h3>
+      <p><strong>Conditions name</strong>  - billing_type</p>
+      <p><strong>Conditions fields name</strong>  -  billing_type</p>
+      <p><strong>Filter on collection name</strong>  -  oms_sellers</p>
+      <p><strong>Filter on field name</strong>  -  billing_type</p>
+      <p><strong>Filter condition</strong>  -  $in: billing_type</p>
     </div>
   </div>
 </section>
 
+
+<!-- ============ NOTIFICATION CONDITION MAPPING ============ -->
+<section class="section" id="notification_condition_mapping">
+  <div class="section-head reveal">
+    <div class="eyebrow">04 · Notification Condition Mapping</div>
+    <h2>Notification → condition Mapping</h2>
+    <p>Each notification type is wired to a set of conditions stored in the master collection,
+      maintained by product. Select a notification to see what it's mapped to.</p>
+  </div>
+
+  <div class="graph-layout reveal">
+    <div class="graph-list" id="notif-list" role="list"></div>
+
+    <div class="graph-canvas-wrap">
+      <div class="graph-canvas-head">
+        <span id="graph-canvas-title">No notification selected</span>
+        <span class="tag teal" id="graph-canvas-count">0 conditions</span>
+      </div>
+      <svg id="condition-graph" viewBox="0 0 640 380" preserveAspectRatio="xMidYMid meet"></svg>
+      <div class="graph-empty" id="graph-empty">Select a notification on the left to draw its condition graph.</div>
+    </div>
+  </div>
+</section>
 <!-- ============ SECURITY ============ -->
 <section class="section" id="security">
   <div class="section-head reveal">
-    <div class="eyebrow">04 · Security Notes</div>
+    <div class="eyebrow">05 · Security Notes</div>
     <h2>Keeping delivery credentials contained.</h2>
   </div>
 
@@ -215,7 +328,7 @@
 <!-- ============ MONITORING ============ -->
 <section class="section" id="monitoring">
   <div class="section-head reveal">
-    <div class="eyebrow">05 · Monitoring &amp; Alerting</div>
+    <div class="eyebrow">06 · Monitoring &amp; Alerting</div>
     <h2>Signals the team watches.</h2>
   </div>
 
@@ -226,8 +339,8 @@
         <tr><td class="field">Consumer lag</td><td>Growing lag means CPaaS isn't keeping pace with Kafka — a signal to scale consumers.</td></tr>
         <tr><td class="field">Delivery success rate</td><td>Tracks the ratio of delivered to attempted sends per cycle.</td></tr>
         <tr><td class="field">Invalid token rate</td><td>A rising rate can indicate a client-side token registration issue.</td></tr>
-        <tr><td class="field">Scheduler cycle duration</td><td>Watched against the 15-minute interval to catch cycles that run long.</td></tr>
-        <tr><td class="field">Dead-letter volume</td><td>Any sustained volume here is investigated as a delivery-path issue.</td></tr>
+        <tr><td class="field">Scheduler cycle duration</td><td>Watched against the 15-minute interval to catch cycles that run long.</td><tr>
+        <tr><td class="field">Communication logs collection</td><td>For every request sent to the external Firebase service, the response received from Firebase is stored in the communication_logs collection.</td></tr>
       </tbody>
     </table>
   </div>

@@ -3,9 +3,10 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Push Notification to Mobile APP — Architecture Documentation</title>
+<title>Push Notification to Mobile Doc</title>
 <meta name="description" content="Architecture documentation for a production push notification pipeline: iWorkBench, MongoDB, a 15-minute scheduler, Kafka, a CPaaS service, and Firebase Cloud Messaging.">
 <link rel="stylesheet" href="style.css">
+<link rel="icon" type="image/png" href="favicon.png">
 </head>
 <body>
 
@@ -28,9 +29,9 @@
     <ul class="nav-links" id="nav-links">
       <li><a href="#overview">Overview</a></li>
       <li><a href="#flow">Flow</a></li>
-      <li><a href="#fcm-registration">FCM Tokens</a></li>
+      <li><a href="#fcm-registration">FCM_Tokens</a></li>
       <li><a href="#database">Database</a></li>
-      <li><a href="#kafka">Kafka / CPaaS</a></li>
+      <li><a href="#kafka">Kafka/CPaaS</a></li>
       <li><a href="details.html" class="docs-link">Protected Docs →</a></li>
     </ul>
     <button class="nav-toggle" id="nav-toggle" aria-label="Toggle navigation">☰</button>
@@ -44,7 +45,7 @@
       <div class="eyebrow">Architecture Documentation</div>
       <h1>Push Notification to <span class="accent">Mobile APP</span></h1>
       <p class="lede">A visual walkthrough of a live, production-used notification pipeline —
-        from an Ops/Admin action in iWorkBench, through MongoDB and a scheduled evaluation job,
+        from an Ops/IworkBench user action in iWorkBench, through MongoDB and a scheduled evaluation job,
         to Kafka, a CPaaS delivery service, and Firebase Cloud Messaging.</p>
     </div>
     <div class="hero-meta">
@@ -76,7 +77,7 @@
 
       <div class="p-node" tabindex="0" role="listitem" data-node="mongodb">
         <div class="icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6"><path d="M12 3c3 3 4 6 4 9a4 4 0 0 1-8 0c0-3 1-6 4-9Z"/><path d="M12 12v9"/></svg></div>
-        <div class="label">MongoDB</div><div class="sub">seller_mob_noti</div>
+        <div class="label">MongoDB</div><div class="sub">MOBILE DB</div>
       </div>
       <div class="p-link"><span class="flow-dot" style="animation-delay:.3s"></span></div>
 
@@ -94,7 +95,7 @@
 
       <div class="p-node" tabindex="0" role="listitem" data-node="tokens">
         <div class="icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6"><rect x="6" y="2" width="12" height="20" rx="2.5"/><path d="M10 18h4"/></svg></div>
-        <div class="label">FCM Tokens</div><div class="sub">lookup</div>
+        <div class="label">FCM Tokens</div><div class="sub">Firebase Token</div>
       </div>
       <div class="p-link"><span class="flow-dot" style="animation-delay:1.2s"></span></div>
 
@@ -112,7 +113,7 @@
 
       <div class="p-node violet" tabindex="0" role="listitem" data-node="fcm">
         <div class="icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6"><path d="M12 2 3 7v6c0 5 4 8 9 9 5-1 9-4 9-9V7l-9-5Z"/></svg></div>
-        <div class="label">Firebase FCM</div><div class="sub">OAuth 2.0 POST</div>
+        <div class="label">Firebase FCM</div><div class="sub">Extensional Firebase Platform</div>
       </div>
       <div class="p-link"><span class="flow-dot" style="animation-delay:2.1s"></span></div>
 
@@ -124,7 +125,7 @@
 
     <div class="pipeline-detail">
       <div class="d-title" id="pipeline-detail-title">iWorkBench — Admin Console</div>
-      <p id="pipeline-detail-text">An Ops/Admin user composes a notification in iWorkBench.</p>
+      <p id="pipeline-detail-text">An Ops/IworkBench user composes a notification in iWorkBench.</p>
     </div>
   </div>
 </header>
@@ -134,16 +135,15 @@
   <div class="section-head reveal">
     <div class="eyebrow">01 · Architecture Overview</div>
     <h2>One notification, six systems, one delivered push.</h2>
-    <p>An Ops/Admin user creates a notification in iWorkBench. It's stored in MongoDB. A scheduler
+    <p>An Ops/IworkBench user creates a notification in iWorkBench. It's stored in MongoDB. A scheduler
       running every 15 minutes evaluates eligible notifications and sellers, resolves FCM tokens,
-      publishes events to Kafka, and a CPaaS service consumes those events and calls Firebase FCM,
-      which delivers the notification to the seller's device.</p>
+      publishes events to Kafka, and a CPaaS service consumes those events and hit http_post method to firebase using fcm token and api_key for authentication, which delivers the notification to the seller's device.</p>
   </div>
 
   <div class="grid cols-3 reveal">
     <div class="card">
       <h3><span class="tag teal">Authoring</span></h3>
-      <p><b style="color:var(--text)">iWorkBench</b> is where an Ops/Admin defines what a notification says,
+      <p><b style="color:var(--text)">iWorkBench</b> is where an Ops/IworkBench user defines what a notification says,
         who it's for, and when it's allowed to send. Nothing leaves this layer immediately — the
         notification is written to MongoDB in a pending state.</p>
     </div>
@@ -174,7 +174,7 @@
       <div class="step-num">01</div>
       <div class="step-body">
         <h4>Notification created in iWorkBench</h4>
-        <p>An Ops/Admin user fills in title, body, deep link, target audience, and send window,
+        <p>An Ops/IworkBench user fills in title, body, deep link, target audience, and send window,
           then saves the notification.</p>
         <div class="step-meta"><span class="tag">iWorkBench</span></div>
       </div>
@@ -182,9 +182,17 @@
     <div class="flow-step">
       <div class="step-num">02</div>
       <div class="step-body">
+        <h4>Approve Notifications</h4>
+        <p>Created notifications requires manual approval. Access to approval page are not given to all users.</p>
+        <div class="step-meta"><span class="tag">iWorkBench</span></div>
+      </div>
+    </div>
+    <div class="flow-step">
+      <div class="step-num">02</div>
+      <div class="step-body">
         <h4>Record persisted to MongoDB</h4>
-        <p>The notification is written to the <code class="mono">seller_mob_noti</code> collection with a
-          <code class="mono">PENDING</code> status, awaiting the next scheduler cycle.</p>
+        <p>The notification is stored into <code class="mono">seller_mobile_notifications</code> collection with a
+          <code class="mono">PENDING</code> status.</p>
         <div class="step-meta"><span class="tag teal">MongoDB</span></div>
       </div>
     </div>
@@ -192,8 +200,7 @@
       <div class="step-num">03</div>
       <div class="step-body">
         <h4>Scheduler cycle begins (every 15 minutes)</h4>
-        <p>The production scheduler reads notification records from MongoDB whose send window has opened
-          and are still pending.</p>
+        <p>The production scheduler reads notification which are approved by authorized users from MongoDB </p>
         <div class="step-meta"><span class="tag amber">Scheduler</span></div>
       </div>
     </div>
@@ -201,8 +208,7 @@
       <div class="step-num">04</div>
       <div class="step-body">
         <h4>Dynamic conditions evaluated</h4>
-        <p>The scheduler evaluates each notification's targeting rules — category, region, seller tier,
-          opt-in status — to build the eligible seller set. See <a href="#conditions" style="color:var(--teal)">condition types</a> below.</p>
+        <p>The scheduler evaluates each notification's targeting different types of conditions i.e. Byoc courier, Plan type, specific seller, etc.</p>
         <div class="step-meta"><span class="tag amber">Scheduler</span></div>
       </div>
     </div>
@@ -210,8 +216,7 @@
       <div class="step-num">05</div>
       <div class="step-body">
         <h4>FCM tokens resolved</h4>
-        <p>For each eligible seller, the scheduler resolves the FCM token their mobile app most recently
-          registered.</p>
+        <p>When the seller logs in or logs out, the FCM token is stored in the database by calling an API from the mobile app. This FCM token is then used when sending a POST request to Firebase..</p>
         <div class="step-meta"><span class="tag amber">Scheduler</span></div>
       </div>
     </div>
@@ -316,36 +321,136 @@
 <section class="section" id="database">
   <div class="section-head reveal">
     <div class="eyebrow">04 · Database Overview</div>
-    <h2>seller_mob_noti</h2>
-    <p>The MongoDB collection that backs every notification, from draft to delivery accounting.</p>
+    <p>The MongoDB collections that backs every notification, from draft to delivery accounting.</p>
+    <h2>seller_mobile_notifications</h2>
+    <h4>(This collection is used for storing created notification details)</h4>
   </div>
-
   <div class="table-wrap reveal">
     <table>
       <thead>
         <tr><th>Field</th><th>Type</th><th>Description</th></tr>
       </thead>
       <tbody>
-        <tr><td class="field">_id</td><td>ObjectId</td><td>Unique notification identifier.</td></tr>
-        <tr><td class="field">title</td><td>String</td><td>Notification headline shown on the device.</td></tr>
-        <tr><td class="field">body</td><td>String</td><td>Notification message text.</td></tr>
-        <tr><td class="field">deep_link</td><td>String</td><td>In-app destination opened when the notification is tapped.</td></tr>
-        <tr><td class="field">target_criteria</td><td>Object</td><td>Category, region, seller tier, and opt-in requirements used during condition evaluation.</td></tr>
-        <tr><td class="field">schedule_window</td><td>Object</td><td>Earliest and latest time the notification is eligible to send.</td></tr>
-        <tr><td class="field">status</td><td>Enum</td><td>DRAFT · SCHEDULED · PROCESSING · SENT · PARTIAL · FAILED.</td></tr>
-        <tr><td class="field">created_by</td><td>String</td><td>Ops/Admin user who authored the notification in iWorkBench.</td></tr>
-        <tr><td class="field">created_at</td><td>Timestamp</td><td>When the record was first persisted.</td></tr>
-        <tr><td class="field">processed_at</td><td>Timestamp</td><td>When the scheduler last evaluated this record.</td></tr>
-        <tr><td class="field">eligible_seller_count</td><td>Number</td><td>Sellers who passed condition evaluation for this cycle.</td></tr>
-        <tr><td class="field">delivered_count</td><td>Number</td><td>Events confirmed delivered by the CPaaS service.</td></tr>
-        <tr><td class="field">failed_count</td><td>Number</td><td>Events that failed delivery (invalid token, FCM error, etc.).</td></tr>
+        <tr><td class="field">creation_date</td><td>i64</td><td>Epoch i64 value contains datetime.</td></tr>
+        <tr><td class="field">last_updated_on</td><td>i64</td><td>Epoch i64 value contains datetime.</td></tr>
+        <tr><td class="field">is_active</td><td>String</td><td>Important boolean flag.</td></tr>
+        <tr><td class="field">schedule_status</td><td>String</td><td>Schedule status contains status of notification monitored when the schedule type is recurring.</td></tr>
+        <tr><td class="field">notification_status</td><td>String</td><td>Notification status is stored as Pending when notification initially created, changes to Accepted when notification is approved.</td></tr>
+        <tr><td class="field">form_name</td><td>String</td><td>Notification name provided by user.</td></tr>
+        <tr><td class="field">notification_type</td><td>String</td><td>Type of notification user wants to trigger.</td></tr>
+        <tr><td class="field">cta</td><td>Object</td><td>Cta contains inside_mobile_page or outside_mobile_page.</td></tr>
+        <tr><td class="field">schedule_type</td><td>String</td><td>Schedule type of notification either recurring or one time.</td></tr>
+        <tr><td class="field">schedule_time_</td><td>String</td><td>Schedule time of notification.</td></tr>
+        <tr><td class="field">one_time_date</td><td>String</td><td>One time date field will stored only when schedule type is one time.</td></tr>
+        <tr><td class="field">next_schedule_time</td><td>String</td><td>Next schedule time are stored to follow recurring loop.</td></tr>
+        <tr><td class="field">all_conditions</td><td>Array</td><td>All conditions are stored to get all selected conditions.</td></tr>
+        <tr><td class="field">conditions</td><td>Object</td><td>Conditions object contains all the conditions object with the internal parameters.</td></tr>
+        <tr><td class="field">attach_file_url</td><td>Array</td><td>Attach file url contain url of image, if provided by user.</td></tr>
       </tbody>
+    </table>
+  </div>
+
+  <div class="section-head reveal">
+    <h2>mobile_user_fcm_token</h2> <h4>(This collection is used just for logs)</h4>
+  </div>
+  <div class="table-wrap reveal">
+    <table>
+      <thead>
+        <tr><th>Field</th><th>Type</th><th>Description</th></tr>
+      </thead>
+      <tbody>
+        <tr><td class="field">user_fcm_token</td><td>String</String><td>Fcm token provided through api hit while user login and logout.</td></tr>
+        <tr><td class="field">device_type</td><td>String</td><td>Device type either Android or IOS.</td></tr>
+        <tr><td class="field">device_id</td><td>String</td><td>Quick device id for different devices.</td></tr>
+        <tr><td class="field">app_version</td><td>String</td><td>Current app version in which user's app is running.</td></tr>
+        <tr><td class="field">user_id</td><td>ObjectId</td><td>This user id is seller id of user.</td></tr>
+        <tr><td class="field">creation_date</td><td>i64</td><td>Epoch i64 value contains datetime.</td></tr>
+        <tr><td class="field">last_updated_date</td><td>i64</td><td>Epoch i64 value contains datetime.</td></tr>
+        <tr><td class="field">is_disabled</td><td>bool</td><td>Boolean flag which need to be false.</td></tr>
+        </tbody>
+    </table>
+  </div>
+
+  <div class="section-head reveal">
+    <h2>seller_mobile_device_info</h2> <h4>(This collection is used for fetching fcm token by scheduler)</h4>
+  </div>
+  <div class="table-wrap reveal">
+    <table>
+      <thead>
+        <tr><th>Field</th><th>Type</th><th>Description</th></tr>
+      </thead>
+      <tbody>
+        <tr><td class="field">user_fcm_token</td><td>String</String><td>Fcm token provided through api hit while user login and logout.</td></tr>
+        <tr><td class="field">device_type</td><td>String</td><td>Device type either Android or IOS.</td></tr>
+        <tr><td class="field">device_id</td><td>String</td><td>Quick device id for different devices.</td></tr>
+        <tr><td class="field">app_version</td><td>String</td><td>Current app version in which user's app is running.</td></tr>
+        <tr><td class="field">seller_id</td><td>ObjectId</td><td>Quick seller id of different sellers.</td></tr>
+        <tr><td class="field">creation_date</td><td>i64</td><td>Epoch i64 value contains datetime.</td></tr>
+        <tr><td class="field">last_updated_date</td><td>i64</td><td>Epoch i64 value contains datetime.</td></tr>
+        <tr><td class="field">is_disabled</td><td>bool</td><td>Boolean flag, which need to be false.</td></tr>
+        </tbody>
+    </table>
+  </div>
+
+  <div class="section-head reveal">
+    <h2>mst_mobile_page_mapping</h2> <h5>(This collection is used for getting page list via graphQL)</h5>
+  </div>
+  <div class="table-wrap reveal">
+    <table>
+      <thead>
+        <tr><th>Field</th><th>Type</th><th>Description</th></tr>
+      </thead>
+      <tbody>
+        <tr><td class="field">name</td><td>String</String><td>Frontend name of page.</td></tr>
+        <tr><td class="field">value</td><td>String</td><td>Actual path of page in mobile app.</td></tr>
+        <tr><td class="field">is_active</td><td>bool</td><td>Boolean flag which need to be true.</td></tr>
+        <tr><td class="field">created_on</td><td>i64</td><td>Epoch i64 value contains datetime.</td></tr>
+        </tbody>
+    </table>
+  </div>
+
+  <div class="section-head reveal">
+    <h2>mst_mobile_notification_type</h2> <h5>(This collection is used for getting notification type and conditions list via graphQL)</h5>
+  </div>
+  <div class="table-wrap reveal">
+    <table>
+      <thead>
+        <tr><th>Field</th><th>Type</th><th>Description</th></tr>
+      </thead>
+      <tbody>
+        <tr><td class="field">name</td><td>String</String><td>Actual value of used for filters.</td></tr>
+        <tr><td class="field">value</td><td>String</td><td>Frontend name of notification type.</td></tr>
+        <tr><td class="field">is_active</td><td>bool</td><td>Boolean flag which need to be true.</td></tr>
+        <tr><td class="field">created_date</td><td>i64</td><td>Epoch i64 value contains datetime.</td></tr>
+        <tr><td class="field">conditions</td><td>Array</td><td>Conditions according to notification type.</td></tr>
+        </tbody>
+    </table>
+  </div>
+  <div class="section-head reveal">
+    <h2>oms_cpaas_communication_logs</h2> <h5>(This collection is used to store the responses (success or failed) of firebase API hit)</h5>
+  </div>
+  <div class="table-wrap reveal">
+    <table>
+      <thead>
+        <tr><th>Field</th><th>Type</th><th>Description</th></tr>
+      </thead>
+      <tbody>
+        <tr><td class="field">creation_date</td><td>i64</String><td>Epoch i64 value contains datetime.</td></tr>
+        <tr><td class="field">communication_type</td><td>String</td><td>Contains the type of communication i.e. Mobile_Notification.</td><tr>
+        <tr><td class="field">communication_event</td><td>String</td><td>Contains the event name of communication i.e. TRIGGER_NOTIFICATION.</td></tr>
+        <tr><td class="field">channel</td><td>String</td><td>Contains the channel name i.e. MOBILE_APP.</td></tr>
+        <tr><td class="field">sent_to</td><td>ObjectId</td><td>Contains the seller_id of the seller.</td></tr>
+        <tr><td class="field">send_from</td><td>String</td><td>External service name Firebase.</td></tr>
+        <tr><td class="field">ack_status</td><td>String</td><td>Acknowledge status of the firebase API request i.e. SUCCESS|FAILED.</td></tr>
+        <tr><td class="field">ack_response</td><td>String</td><td>Acknowledge response which we get after hitting the firebase API.</td></tr>
+        <tr><td class="field">notification_obj</td><td>Object</td><td>Contains all the neccessary fields like fcm_token, notification_name etc.</td></tr>
+        </tbody>
     </table>
   </div>
 </section>
 
 <!-- ============ DYNAMIC CONDITIONS ============ -->
-<section class="section" id="conditions">
+<!-- <section class="section" id="conditions">
   <div class="section-head reveal">
     <div class="eyebrow">05 · Dynamic Condition Overview</div>
     <h2>How eligibility is decided.</h2>
@@ -375,7 +480,7 @@
       <div><h4>Frequency caps</h4><p>Per-seller sending limits prevent a single seller from receiving an excessive number of notifications in a short period.</p></div>
     </div>
   </div>
-</section>
+</section> -->
 
 <!-- ============ KAFKA / CPAAS / FCM ============ -->
 <section class="section" id="kafka">
