@@ -15,7 +15,7 @@
       <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" width="20" height="20"><rect x="4" y="10" width="16" height="10" rx="2"/><path d="M8 10V7a4 4 0 0 1 8 0v3"/></svg>
     </div>
     <h3>Protected documentation</h3>
-    <p class="sub">Deeper technical material — event schemas, retry policy, scaling and monitoring notes.</p>
+    <p class="sub">Deeper technical material — firebase post sample payload, apis involved etc.</p>
 
     <form id="gate-form">
       <div class="field-group">
@@ -30,13 +30,13 @@
       <button type="submit" class="btn primary gate-submit">Unlock documentation</button>
     </form>
 
-    <div class="gate-hint">
+    <!-- <div class="gate-hint">
       Demo credentials — <b>demo</b> / <b>architecture</b>
-    </div>
-    <div class="gate-disclaimer">
+    </div> -->
+    <!-- <div class="gate-disclaimer">
       This login is a presentation gate for a static documentation site. It runs entirely in your
       browser and is not a real authentication system.
-    </div>
+    </div> -->
   </div>
 </div>
 
@@ -49,7 +49,7 @@
     <ul class="nav-links" id="nav-links">
       <li><a href="index.html">Overview</a></li>
       <li><a href="#schema">Firebase_Schema</a></li>
-      <li><a href="#reliability">Reliability</a></li>
+      <li><a href="#apis_involved">APIs_Involved</a></li>
       <li><a href="#conditions_filter">Conditions_Filter</a></li>
       <li><a href="#notification_condition_mapping">Notification_Condition_Mapping</a></li>
       <li><a href="#security">Security</a></li>
@@ -115,45 +115,23 @@
   </div>
 </section>
 
-<!-- ============ RELIABILITY ============ -->
-<section class="section" id="reliability">
+<!-- ============ APIS_INVOLVED ============ -->
+<section class="section" id="apis_involved">
   <div class="section-head reveal">
-    <div class="eyebrow">02 · Reliability &amp; Retry Policy</div>
-    <h2>What happens when a send fails.</h2>
-    <p>Delivery failures fall into two buckets: transient (retry) and terminal (don't retry).</p>
-  </div>
-
-  <div class="grid cols-2 reveal">
-    <div class="card">
-      <h3><span class="tag teal">Transient</span></h3>
-      <p style="margin-bottom:12px;">Network timeouts, FCM rate limiting, and 5xx responses are retried
-        with exponential backoff by the CPaaS consumer before the event is considered failed.</p>
-      <ul style="color:var(--text-dim); font-size:14px; padding-left:18px; list-style:disc;">
-        <li>Bounded number of attempts per event</li>
-        <li>Backoff increases between attempts</li>
-        <li>Exhausted retries route to a dead-letter topic</li>
-      </ul>
-    </div>
-    <div class="card">
-      <h3><span class="tag amber">Terminal</span></h3>
-      <p style="margin-bottom:12px;">An FCM response indicating an invalid or unregistered token is not
-        retried — it's treated as a signal to clean up stale state.</p>
-      <ul style="color:var(--text-dim); font-size:14px; padding-left:18px; list-style:disc;">
-        <li>Unregistered token is removed from the seller's record</li>
-        <li>Event is marked failed on the notification's counters</li>
-        <li>No further attempts for that token</li>
-      </ul>
-    </div>
+    <div class="eyebrow">02 · APIs Involved</div>
+    <h2>Get to know about apis involved in this architecture.</h2>
   </div>
 
   <div class="table-wrap reveal" style="margin-top:24px;">
     <table>
-      <thead><tr><th>Outcome</th><th>Handling</th></tr></thead>
+      <thead><tr><th>API endpoint</th><th>Method</th><th>Working</th></tr></thead>
       <tbody>
-        <tr><td class="field">Delivered</td><td>notification.delivered_count incremented.</td></tr>
-        <tr><td class="field">Retried &amp; delivered</td><td>Counted as delivered once an attempt succeeds.</td></tr>
-        <tr><td class="field">Retries exhausted</td><td>Routed to dead-letter topic; notification.failed_count incremented.</td></tr>
-        <tr><td class="field">Invalid token</td><td>Token cleared from seller record; treated as failed, not retried.</td></tr>
+        <tr><td class="field">iworkbench/get_mobile_notification_data_list</td><td>GET</td><td>This API is used for fetching data of already created notifications.</td></tr>
+        <tr><td class="field">iworkbench/create_mobile_alert_notification_form</td><td>POST</td><td>This API is used for creating the notification by taking the payload.</td></tr>
+        <tr><td class="field">iworkbench/get_view_notification_data</td><td>GET</td><td>This API is used for fetching the popup view screen data from where user can see already created notification.</td></tr>
+        <tr><td class="field">iworkbench/update_form_config</td><td>POST</td><td>This API is used for updating the config of already created notification i.e. by changing toggle.</td></tr>
+        <tr><td class="field">iworkbench/update_mobile_notification_status</td><td>POST</td><td>This API is used for updating the status of already created notification i.e. approve or reject.</td></tr>
+        <tr><td class="field">iworkbench/update_fcm_token</td><td>POST</td><td>This API is used for updating FCM token against different sellers.</td></tr>
       </tbody>
     </table>
   </div>

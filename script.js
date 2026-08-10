@@ -188,7 +188,7 @@ function initPipeline(){
 function initSchedulerClock(){
   const el = document.getElementById('scheduler-clock');
   if(!el) return;
-  const CYCLE = 45; // simulated seconds standing in for the 15-minute production cycle
+  const CYCLE = 15 * 60 ; // simulated seconds standing in for the 15-minute production cycle
   let remaining = CYCLE;
   function render(){
     const m = String(Math.floor(remaining/60)).padStart(2,'0');
@@ -333,8 +333,8 @@ function initGate(){
   const gate = document.getElementById('gate');
   if(!gate) return;
 
-  const DEMO_USER = 'demo';
-  const DEMO_PASS = 'architecture';
+  const DEMO_USER = 'admin';
+  const DEMO_PASS = 'testing123';
 
   const form = document.getElementById('gate-form');
   const userInput = document.getElementById('gate-user');
