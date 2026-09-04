@@ -333,8 +333,8 @@ function initGate(){
   const gate = document.getElementById('gate');
   if(!gate) return;
 
-  const DEMO_USER = process.env.DEMO_USER;
-  const DEMO_PASS = process.env.DEMO_PASS;
+  const DEMO_USER = 'admin';
+  const DEMO_PASS = 'testing@123';
 
   const form = document.getElementById('gate-form');
   const userInput = document.getElementById('gate-user');
